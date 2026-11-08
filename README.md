@@ -2,6 +2,8 @@
 
 > 让 DeepSeek Harness 里的多个对话像一支队伍一样协作：队长开新对话、分派任务、运行中插话、只读查看进度；worker 有问题直接回问队长。
 
+![cover](assets/cover.png)
+
 这是一个 **DeepSeek Harness（DSH）持久化插件**，不依赖任何第三方包，直接以本地目录安装。
 
 ```
