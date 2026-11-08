@@ -4,6 +4,8 @@
 
 ![cover](assets/cover.png)
 
+预告片（1080p / 60s）：[下载 MP4](https://github.com/cao123-2024/dsh-cross-session/releases/download/v1.0.0/dsh-cross-session-trailer.mp4)
+
 这是一个 **DeepSeek Harness（DSH）持久化插件**，不依赖任何第三方包，直接以本地目录安装。
 
 ```
