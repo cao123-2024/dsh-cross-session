@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Cross-Session Shout",
+    "description": "Create separate conversations in the current workspace and send AI-labeled messages between them."
+  }
+}

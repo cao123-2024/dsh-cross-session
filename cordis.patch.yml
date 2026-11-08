@@ -1,0 +1,9 @@
+- insert:
+    - id: cross-session-shout
+      name: '@local/dsh-cross-session'
+      config:
+        maxCreatedConversations: 12
+        rateLimitPerMinute: 20
+        maxMessageBytes: 32768
+        maxShoutChain: 6
+        inheritPermissions: true
