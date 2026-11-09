@@ -2,9 +2,9 @@
 
 > 让 DeepSeek Harness 里的多个对话像一支队伍一样协作：队长开新对话、分派任务、运行中插话、只读查看进度；worker 有问题直接回问队长。
 
-![cover](assets/cover.png)
+![cover](assets/cover-3d.png)
 
-预告片（1080p / 60s）：[下载 MP4](https://github.com/cao123-2024/dsh-cross-session/releases/download/v1.0.0/dsh-cross-session-trailer.mp4)
+预告片（1080p / 67s，3D 工作台 + 真实演示）：[下载 MP4](https://github.com/cao123-2024/dsh-cross-session/releases/download/v1.1.0/dsh-cross-session-3d.mp4)
 
 这是一个 **DeepSeek Harness（DSH）持久化插件**，不依赖任何第三方包，直接以本地目录安装。
 
@@ -26,16 +26,35 @@
 
 一句话：**Super-agent 管“活从哪来”，本插件管“活怎么在你桌面上的几个对话之间流动”。**
 
+## 团队层级（2 / 3 / 4 层）
+
+标题前缀就是角色，侧边栏会在名字前画图标：
+
+| 角色 | 标题前缀 | 图标 | 职责 |
+| --- | --- | --- | --- |
+| 队长 leader | `队长｜` | 金色皇冠 | 接需求、拆分、派活、汇总 |
+| 总监 director | `总监｜` | 紫色层叠 | 仅四层模式；管经理 |
+| 经理 manager | `经理｜` | 青色菱形 | 管 3+ worker |
+| worker | `worker｜` | 绿色齿轮 | 执行；问题回问上级 |
+
+- **2 层**：队长直管 3–4 个 worker，默认。
+- **3 层**：队长 → 经理 → worker；每个经理建议带 ≥3 个 worker。只能开 2 个经理时，不要硬开 3 层，回 2 层。
+- **4 层**：队长 → 总监 → 经理 → worker；仅在 `allowFourTier: true` 且任务足够大时启用。
+
+任务书只是建议：AI 可以自行决定经理数量、难度和层级，也可以不按任务书来。完整规则见 [docs/HIERARCHY.md](docs/HIERARCHY.md)，AI skill 见 [skills/multi-agent-shout/SKILL.md](skills/multi-agent-shout/SKILL.md)。
+
 ## 功能
 
 | 工具 | 作用 |
 | --- | --- |
-| `new_conversation` | 在当前/指定工作区新建独立对话，命名并下发完整任务；可选 `workspace_path` 自动创建项目目录与工作区 |
+| `new_conversation` | 新建独立对话，支持 `role` / `reports_to`；自动写角色标题前缀 |
+| `assign_agent_role` | 给已有对话改角色（队长 / 总监 / 经理 / worker） |
+| `get_agent_team` | 读当前层级、`allow_four_tier` 和每个 agent 的角色 |
 | `list_conversations` | 列出 root 对话：标题、工作区、运行状态（已归档不显示） |
 | `shout` | 向另一个对话投递消息：运行中在最近 step 边界收到，空闲时唤醒新 turn |
 | `ask_master` | worker 专用：把问题/阻塞直接交给创建它的主 Agent，而不是问用户 |
 | `get_chat_info` | 只读查看对话状态、当前 turn/step、最近消息与工具调用；目标完全无感知 |
-| `rename_conversation` | 实时改侧边栏显示名 |
+| `rename_conversation` | 实时改侧边栏显示名（保留角色前缀） |
 | `interrupt_conversation` | 停止目标当前 turn，保留待处理输入 |
 | `archive_conversation` | 归档已完成的 worker |
 | `list_permission_presets` / `list_models` | 查看可选权限预设与模型 |
@@ -84,6 +103,7 @@ dsh plugin --profile desktop add "<本仓库绝对路径>"
         maxMessageBytes: 32768
         maxShoutChain: 6
         inheritPermissions: true
+        allowFourTier: false
 ```
 
 ## 已知限制

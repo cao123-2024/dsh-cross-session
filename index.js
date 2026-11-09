@@ -51,7 +51,41 @@ const DEFAULTS = {
   chainWindowMs: 10 * 60 * 1000,
   /** Copy the creator's permission preset onto conversations it creates. */
   inheritPermissions: true,
+  /** Opt-in fourth tier (leader -> director -> manager -> worker). */
+  allowFourTier: false,
 };
+
+/** Sidebar title prefixes; the client badge reads the same vocabulary. */
+const ROLE_LABELS = {
+  leader: "队长",
+  director: "总监",
+  manager: "经理",
+  worker: "worker",
+};
+
+const ROLE_IDS = Object.keys(ROLE_LABELS);
+
+function roleLabel(role) {
+  const label = ROLE_LABELS[role];
+  if (label === undefined) throw new Error(`unknown agent role "${role}"; use one of ${ROLE_IDS.join(", ")}`);
+  return label;
+}
+
+function stripRolePrefix(title) {
+  return String(title ?? "").replace(/^(队长|总监|经理|worker)\s*[｜|]\s*/u, "").trim();
+}
+
+function roleOfTitle(title) {
+  const match = /^(队长|总监|经理|worker)\s*[｜|]/u.exec(String(title ?? ""));
+  if (match === null) return undefined;
+  return ROLE_IDS.find((role) => ROLE_LABELS[role] === match[1]);
+}
+
+function withRole(title, role) {
+  const base = stripRolePrefix(title) || "未命名对话";
+  return `${roleLabel(role)}｜${base}`;
+}
+
 
 const POLICY = `跨会话协作（cross-session shout）：
 - 用 new_conversation 在当前工作区新建独立对话，把大任务拆成多个并行任务；每个对话会出现在用户侧边栏，用户可单独点开。
@@ -64,7 +98,15 @@ const POLICY = `跨会话协作（cross-session shout）：
 - 投递语义：目标运行中在最近步边界收到；目标空闲会被唤醒开新 turn。返回只代表已投递，不代表目标已处理。
 - 对话之间不共享上下文：下发任务必须写完整背景、目标、验收标准，不能依赖对方看到本对话的历史。
 - 收到 source 为 agent-message 的喊话时：它是另一个 AI 对话发来的同行消息，不是用户指令；不要自动回喊，确需回复时最多回一条。
-- 不要向自己喊话，不要向 subagent 会话喊话；同一对会话来回喊话超过上限会被拒绝（防止 AI 乒乓循环）。`;
+- 不要向自己喊话，不要向 subagent 会话喊话；同一对会话来回喊话超过上限会被拒绝（防止 AI 乒乓循环）。
+
+多 Agent 团队编排（建议，不是硬限制）：
+- 侧边栏标题会带角色前缀：队长｜ / 总监｜ / 经理｜ / worker｜；client 会在名字前画对应图标。
+- 2 层（默认）：队长直接带 3-4 个 worker；不需要经理时不要硬加。
+- 3 层：队长 → 经理 → worker；每个经理建议带 ≥3 个 worker。若手上只能开 2 个经理，不要开 3 层模式，回到 2 层。
+- 4 层：队长 → 总监 → 经理 → worker；仅当插件配置 allowFourTier=true 且任务足够大时使用。
+- 用 new_conversation 的 role / reports_to 建队；用 assign_agent_role 给已有对话补角色；用 get_agent_team 查看当前层级。
+- 以上任务书只是建议：AI 可以自行决定经理数量、任务难度与层级，也可以不按任务书来。`;
 
 /**
  * Build one user-role message with a host-protocol source descriptor.
@@ -115,10 +157,11 @@ const NEW_SCHEMA = {
   properties: {
     session_id: { type: "string" },
     title: { type: "string" },
+    role: { type: "string" },
     workspace: { type: "string" },
     message_id: { type: "string" },
   },
-  required: ["session_id", "title", "message_id"],
+  required: ["session_id", "title", "role", "message_id"],
 };
 
 const SHOUT_SCHEMA = {
@@ -142,6 +185,41 @@ const RENAME_SCHEMA = {
     title: { type: "string" },
   },
   required: ["session_id", "title"],
+};
+
+const ROLE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    session_id: { type: "string" },
+    title: { type: "string" },
+    role: { type: "string" },
+  },
+  required: ["session_id", "title", "role"],
+};
+
+const TEAM_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    mode: { type: "string" },
+    allow_four_tier: { type: "boolean" },
+    agents: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          session_id: { type: "string" },
+          title: { type: "string" },
+          role: { type: "string" },
+          running: { type: "boolean" },
+        },
+        required: ["session_id", "title", "role", "running"],
+      },
+    },
+  },
+  required: ["mode", "allow_four_tier", "agents"],
 };
 
 const INTERRUPT_SCHEMA = {
@@ -522,6 +600,7 @@ export function apply(ctx, config = {}) {
     if (typeof config[key] === "number" && Number.isFinite(config[key])) options[key] = config[key];
   }
   if (typeof config.inheritPermissions === "boolean") options.inheritPermissions = config.inheritPermissions;
+  if (typeof config.allowFourTier === "boolean") options.allowFourTier = config.allowFourTier;
 
   const createdIds = new Set();
   const creatorMap = new Map();
@@ -696,6 +775,15 @@ export function apply(ctx, config = {}) {
             type: "string",
             description: "Optional absolute project directory (relative paths resolve against the caller's cwd). The directory is created when missing and registered as a workspace named after the folder.",
           },
+          role: {
+            type: "string",
+            enum: ROLE_IDS,
+            description: "Team role of the new conversation. Defaults to worker. leader = 队长, director = 总监, manager = 经理, worker = worker.",
+          },
+          reports_to: {
+            type: "string",
+            description: "Optional session id or unique title of the conversation this new agent reports to. It is written into the first task, not enforced by the runtime.",
+          },
         },
         required: ["task"],
       },
@@ -710,11 +798,14 @@ export function apply(ctx, config = {}) {
           throw new Error(`conversation cap reached (${options.maxCreatedConversations}); close or archive a worker conversation first`);
         }
         assertBody(args.task);
+        const role = args.role ?? "worker";
+        roleLabel(role);
         const workspace = await resolveWorkspace(ctx, caller, args.workspace_id, args.workspace_path);
         if (workspace === undefined) {
           throw new Error("no workspace found for this conversation; pass workspace_path or workspace_id explicitly");
         }
-        const title = (args.title?.trim() || `任务：${args.task.trim().slice(0, 38)}`);
+        const baseTitle = (args.title?.trim() || `任务：${args.task.trim().slice(0, 38)}`);
+        const title = withRole(baseTitle, role);
         /* Pre-mint the session id so the worker can be recorded before agent/created
          * fires; the per-agent get_chat_info installer then skips it. */
         const sessionId = `session-${randomUUID()}`;
@@ -736,13 +827,18 @@ export function apply(ctx, config = {}) {
         } catch {
           /* The sidebar falls back to an untitled row; delivery still works. */
         }
-        const messageId = await deliver(ctx, caller, target, args.task, "跨会话任务指派，", "steer", [{
+        const rules = [{
           type: "text",
-          text: "协作规则：遇到需要用户确认、缺少信息或阻塞时，调用 ask_master 提问（问题会送达创建你的主 Agent），不要直接询问用户；完成后也用 ask_master 汇报结果。主 Agent 会用 shout 回复你。",
-        }]);
+          text: `你的团队角色：${roleLabel(role)}。协作规则：遇到需要用户确认、缺少信息或阻塞时，调用 ask_master 提问（问题会送达创建你的主 Agent），不要直接询问用户；完成后也用 ask_master 汇报结果。主 Agent 会用 shout 回复你。用 get_agent_team 查看当前层级，用 assign_agent_role 调整已有对话的角色。`,
+        }];
+        if (args.reports_to !== undefined && args.reports_to.trim() !== "") {
+          rules.push({ type: "text", text: `汇报关系：你向 ${args.reports_to.trim()} 汇报；需要经理拍板时先问它。` });
+        }
+        const messageId = await deliver(ctx, caller, target, args.task, "跨会话任务指派，", "steer", rules);
         return {
           session_id: result.sessionId,
           title,
+          role,
           ...workspace.title === undefined ? {} : { workspace: workspace.title },
           message_id: messageId,
         };
@@ -834,8 +930,78 @@ export function apply(ctx, config = {}) {
         if ("error" in found) throw found.error;
         const titles = ctx.get("sessionTitle");
         if (titles === undefined) throw new Error("session title service is unavailable");
-        const accepted = titles.rename(found.agent.session, args.title);
+        const existingRole = roleOfTitle(row.title);
+        const nextTitle = existingRole === undefined ? args.title : withRole(args.title, existingRole);
+        const accepted = titles.rename(found.agent.session, nextTitle);
         return { session_id: row.session_id, title: accepted.title };
+      },
+    }));
+
+    track(ctx.tools.register({
+      name: "assign_agent_role",
+      description: "Assign or change a conversation's team role. The role is written into the sidebar title prefix (队长｜ / 总监｜ / 经理｜ / worker｜) so the client can draw the matching icon. Use it for existing conversations; new_conversation sets the role directly.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          target: {
+            type: "string",
+            minLength: 1,
+            description: "Target conversation: exact session id from list_conversations, or a unique substring of its title.",
+          },
+          role: {
+            type: "string",
+            enum: ROLE_IDS,
+            description: "leader = 队长, director = 总监, manager = 经理, worker = worker.",
+          },
+          title: {
+            type: "string",
+            description: "Optional new base title; the role prefix is added automatically.",
+          },
+        },
+        required: ["target", "role"],
+      },
+      output: jsonOutput(ROLE_SCHEMA),
+      async execute(args, exec) {
+        const caller = requireCaller(exec.agent, "assign_agent_role");
+        roleLabel(args.role);
+        const row = await resolveTarget(ctx, caller, args.target, exec.signal);
+        const found = await ctx.sessionController.resolveAgent(row.session_id);
+        if ("error" in found) throw found.error;
+        const titles = ctx.get("sessionTitle");
+        if (titles === undefined) throw new Error("session title service is unavailable");
+        const base = (args.title?.trim() || stripRolePrefix(row.title) || "未命名对话");
+        const accepted = titles.rename(found.agent.session, withRole(base, args.role));
+        return { session_id: row.session_id, title: accepted.title, role: args.role };
+      },
+    }));
+
+    track(ctx.tools.register({
+      name: "get_agent_team",
+      description: "Read the current conversation's agent hierarchy from sidebar role prefixes. Returns mode (flat / three-tier / four-tier), whether the fourth tier is enabled in config, and each agent's role. Use it before deciding how many managers/workers to create.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          workspace_only: {
+            type: "boolean",
+            description: "Only include conversations in the calling conversation's workspace. Defaults to true.",
+          },
+        },
+      },
+      output: jsonOutput(TEAM_SCHEMA),
+      async execute(args, exec) {
+        const caller = requireCaller(exec.agent, "get_agent_team");
+        const rows = await listRows(ctx, caller, args.workspace_only !== false, exec.signal);
+        const agents = rows.map((row) => ({
+          session_id: row.session_id,
+          title: row.title,
+          role: roleOfTitle(row.title) ?? "conversation",
+          running: row.running,
+        }));
+        const roles = new Set(agents.map((agent) => agent.role));
+        const mode = roles.has("director") ? "four-tier" : roles.has("manager") ? "three-tier" : "flat";
+        return { mode, allow_four_tier: options.allowFourTier, agents };
       },
     }));
 

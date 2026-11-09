@@ -7,3 +7,4 @@
         maxMessageBytes: 32768
         maxShoutChain: 6
         inheritPermissions: true
+        allowFourTier: false
