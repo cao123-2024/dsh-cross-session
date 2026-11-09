@@ -800,6 +800,9 @@ export function apply(ctx, config = {}) {
         assertBody(args.task);
         const role = args.role ?? "worker";
         roleLabel(role);
+        if (role === "director" && !options.allowFourTier) {
+          throw new Error("director role requires four-tier mode; set allowFourTier: true in the plugin config first");
+        }
         const workspace = await resolveWorkspace(ctx, caller, args.workspace_id, args.workspace_path);
         if (workspace === undefined) {
           throw new Error("no workspace found for this conversation; pass workspace_path or workspace_id explicitly");
@@ -965,6 +968,9 @@ export function apply(ctx, config = {}) {
       async execute(args, exec) {
         const caller = requireCaller(exec.agent, "assign_agent_role");
         roleLabel(args.role);
+        if (args.role === "director" && !options.allowFourTier) {
+          throw new Error("director role requires four-tier mode; set allowFourTier: true in the plugin config first");
+        }
         const row = await resolveTarget(ctx, caller, args.target, exec.signal);
         const found = await ctx.sessionController.resolveAgent(row.session_id);
         if ("error" in found) throw found.error;
