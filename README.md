@@ -100,7 +100,7 @@
 
 ## 安装
 
-要求：DSH `0.2.1-rc.x`（desktop 或其他 profile 均可），无额外依赖。
+要求：DSH `0.2.1-rc.x` 或 `0.3.x`（desktop 或其他 profile 均可），无额外依赖。
 
 ### 方式一：Plugin Manager（推荐）
 
@@ -146,4 +146,5 @@ dsh plugin --profile desktop add "<本仓库绝对路径>"
 ## 许可证
 
 MIT
+
 
