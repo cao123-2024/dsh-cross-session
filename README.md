@@ -2,9 +2,9 @@
 
 > 让 DeepSeek Harness 里的多个对话像一支队伍一样协作：队长开新对话、分派任务、运行中插话、只读查看进度；worker 有问题直接回问队长。
 
-![cover](assets/cover-3d.png)
+![cover](assets/cover-film.png)
 
-预告片（1080p / 67s，3D 工作台 + 真实演示）：[下载 MP4](https://github.com/cao123-2024/dsh-cross-session/releases/download/v1.1.0/dsh-cross-session-3d.mp4)
+预告片（1080p / 48s，无旁白 · 真实 DSH 界面 · 鼠标跟随 3D）：[下载 MP4](https://github.com/cao123-2024/dsh-cross-session/releases/download/v1.2.0/dsh-cross-session-film.mp4)
 
 这是一个 **DeepSeek Harness（DSH）持久化插件**，不依赖任何第三方包，直接以本地目录安装。
 
@@ -15,16 +15,44 @@
     └────── get_chat_info（只读看上下文与进度）
 ```
 
-## 它和官方 Super-agent 的区别
+## 它和官方 Super Agent 的区别
 
-| | 官方 dsh-superagent | 本插件（多 Agent 喊话） |
+### (a) 我们超过 Super Agent 的地方
+
+| 维度 | 多 Agent 喊话 | 官方 Super Agent |
 | --- | --- | --- |
-| 工作层级 | GitHub / 飞书触发的**仓库层自主工人** | 桌面上的**对话层协作** |
-| 是否接管你的聊天窗口 | 否，工单/会话/PR 在它自己的体系里 | 是，直接在你已有的侧边栏对话之间通信 |
-| 适合 | 让 AI 盯仓库、接 issue、开 PR、等审批 | 让多个对话并行推进一个项目，队长随时调度 |
-| 是否替代对方 | — | 不替代；两者可叠加：Super-agent 管仓库，本插件管桌面协作 |
+| 对话可见 | 每个 Agent 都是侧边栏里的独立对话，能点开、插话、改名、归档 | 工单 / 会话在它自己的体系里，桌面侧栏看不到 |
+| 实时协作 | 运行中在 step 边界插话，空闲时唤醒 | 通常等任务结束或人工审批 |
+| 队员回问队长 | worker 用 `ask_master` 直接回问创建它的队长 | 没有桌面会话通道 |
+| 只读看进度 | `get_chat_info` 看 turn、step、最近工具调用 | 只能看工单状态 / PR |
+| 层级可视化 | 队长 / 总监 / 经理 / worker 角色图标，2 / 3 / 4 层自由组合 | 单层自主工人 |
 
-一句话：**Super-agent 管“活从哪来”，本插件管“活怎么在你桌面上的几个对话之间流动”。**
+### (b) Super Agent 做得比我们好的地方
+
+| 维度 | 官方 Super Agent | 我们 |
+| --- | --- | --- |
+| 仓库自主 | 监听 GitHub issue、评论、飞书，自动接单、开 worktree、开 PR | 不做仓库接单 |
+| 云端常驻 | 跑在云端，不依赖你的电脑开着 | 依赖本地 DSH 进程在跑 |
+| 离线与重启 | 工单在服务端持久，重启不丢待办 | 重启后 pending inbox 不会自唤醒 |
+| 组织与审计 | 平台级权限、审计、多人协作 | 沿用 DSH 权限预设，没有组织审计 |
+| 长任务托管 | 可连续数天无人值守 | 更适合桌面上的即时协作 |
+
+### (c) 支持情况
+
+| 能力 | 多 Agent 喊话 | 官方 Super Agent |
+| --- | --- | --- |
+| 独立对话创建 / 命名 | ✓ | △ 工单 |
+| 跨对话喊话 / 运行中插话 | ✓ | ✗ |
+| worker 回问队长 | ✓ | ✗ |
+| 只读查看对话上下文 | ✓ | △ 日志 |
+| 2 / 3 / 4 层团队 | ✓ | ✗ |
+| GitHub issue → PR | ✗ | ✓ |
+| 云端 / 离线运行 | ✗ | ✓ |
+| 组织权限 / 审计 | ✗ | ✓ |
+| 权限 / 模型 / 思考强度 | ✓ | △ |
+| 自带 AI skill / 任务书 | ✓ | ✗ |
+
+一句话：**Super Agent 管仓库，多 Agent 喊话管桌面；不是替代，是叠加。**
 
 ## 团队层级（2 / 3 / 4 层）
 
@@ -118,3 +146,4 @@ dsh plugin --profile desktop add "<本仓库绝对路径>"
 ## 许可证
 
 MIT
+

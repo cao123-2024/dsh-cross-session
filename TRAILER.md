@@ -1,56 +1,70 @@
-# 发布文案（3D 版）
+# 发布文案（3D 演示版）
 
 ## 标题
 
-DeepSeek Harness 多 Agent 喊话 3D 演示：主 Agent 一句话，4 个 Agent 开工｜对比官方 Super-agent
+一个对话，长出一支队伍｜DeepSeek Harness 多 Agent 喊话
 
 备选：
 
-我把多个 AI 对话做成了一张 3D 工作台：鼠标一动，窗口跟着转｜dsh-cross-session
+我给 DeepSeek Harness 做了个 3D 工作台：说一句话，Agent 自己找经理和 worker
 
 ## 正文
 
-这次不是念 PPT，是真演示：
+没有旁白。看画面就够了。
 
-一张 3D 的 Harness 工作台，鼠标左右移动时窗口跟着倾斜，镜头跟着鼠标走。
-主 Agent 收到一句「把这个项目做完：登录 + 支付 + 测试 + 部署」，
-旁边的 4 个 worker 依次亮起、跑进度、回传结果，最后汇总回主 Agent。
+在 DeepSeek Harness 里新建一个对话，对一个 Agent 说：
+「做一个品牌官网：首页、产品、定价、博客，深色模式，移动端适配。」
 
-这就是我给 DeepSeek Harness 写的开源插件 **dsh-cross-session（多 Agent 喊话）**：
+它自己拆成 4 条线，建了 2 个经理、6 个 worker。
+旁边的对话一张一张滑出来，全部从主对话发出；任务跑完，结果回到队长，最后长成一个项目。
 
-- 每个 Agent 是一个独立对话，侧边栏就是组织架构；**队长 / 经理 / worker 名字前有角色图标**。
-- 队长开新对话，派完整任务；运行中在 step 边界插话，空闲时唤醒。
-- worker 遇到问题用 `ask_master` 回问队长；队长用 `get_chat_info` 只读看进度。
-- 支持 2 层（队长 + 3–4 worker）、3 层（队长 → 经理 → worker，每个经理 ≥3 worker）、4 层（再加总监，设置里打开才启用）。
-- 插件带 `SKILL.md` 和任务书：AI 可以自己决定经理数量、难度和层级，也可以不按任务书来。
+这是开源插件 **dsh-cross-session（多 Agent 喊话）**：
 
-和官方 **dsh-superagent** 的差距，一张表说清：
+- 每个 Agent 都是侧边栏里真实存在的独立对话，能点开、插话、改名、归档
+- 队长 / 总监 / 经理 / worker 有角色图标；支持 2 / 3 / 4 层
+- 运行中可以在 step 边界插话；worker 用 `ask_master` 直接回问队长
+- `get_chat_info` 只读查看任意对话的进度，不打扰对方
+- 自带 AI skill 和任务书：AI 自己决定怎么分队，也可以不按任务书来
 
-| | 官方 Super-agent | 多 Agent 喊话 |
+**和官方 Super Agent 的差距：**
+
+**(a) 我们超过它的地方**
+| 维度 | 多 Agent 喊话 | 官方 Super Agent |
 | --- | --- | --- |
-| 工作层级 | GitHub 仓库 / 工单 / PR | 桌面上的多个对话 |
-| 入口 | Issue / 评论 / 飞书 | 侧边栏对话 + shout |
-| 交付 | Pull Request / 审批 | 实时协作 + 只读上下文 |
-| 关系 | 仓库层自主工人 | 对话层协作；可叠加 |
+| 对话可见 | 每个 Agent 都是侧边栏里的独立对话 | 工单/会话在它自己的体系里 |
+| 实时协作 | 运行中插话、空闲唤醒 | 通常等任务结束或审批 |
+| 队员回问 | worker 用 `ask_master` 直接回问队长 | 没有桌面会话通道 |
+| 只读看进度 | 看 turn / step / 最近工具调用 | 只能看工单状态 / PR |
+| 层级可视化 | 队长 / 总监 / 经理 / worker 图标 | 单层自主工人 |
 
-**不是替代，是补上它没覆盖的那一层。**
+**(b) 它比我们强的地方**
+| 维度 | 官方 Super Agent | 我们 |
+| --- | --- | --- |
+| 仓库自主 | 监听 GitHub issue / 评论 / 飞书，接单、开 worktree、开 PR | 不做仓库接单 |
+| 云端常驻 | 不依赖你的电脑开着 | 依赖本地 DSH 进程 |
+| 离线与重启 | 工单服务端持久 | 重启后 pending 不自动唤醒 |
+| 组织与审计 | 平台级权限、审计、多人协作 | 沿用 DSH 权限预设 |
+| 长任务托管 | 可连续数天无人值守 | 更适合桌面即时协作 |
+
+**(c) 支持情况**
+| 能力 | 多 Agent 喊话 | 官方 Super Agent |
+| --- | --- | --- |
+| 独立对话创建 / 命名 | ✓ | △ 工单 |
+| 跨对话喊话 / 运行中插话 | ✓ | ✗ |
+| worker 回问队长 | ✓ | ✗ |
+| 只读查看对话上下文 | ✓ | △ 日志 |
+| 2 / 3 / 4 层团队 | ✓ | ✗ |
+| GitHub issue → PR | ✗ | ✓ |
+| 云端 / 离线运行 | ✗ | ✓ |
+| 组织权限 / 审计 | ✗ | ✓ |
+| 权限 / 模型 / 思考强度 | ✓ | △ |
+| 自带 AI skill / 任务书 | ✓ | ✗ |
+
+一句话：**它管仓库，我们管桌面。不是替代，是叠加。**
 
 GitHub（MIT，欢迎 star / issue）：
 https://github.com/cao123-2024/dsh-cross-session
 
-安装：把仓库作为本地 bundle 安装（`plugin_manager install_bundle`，target 选仓库目录）；或在 CLI 里 `dsh plugin --profile desktop add "<本仓库路径>"`。要求 DSH `0.2.1-rc.x`。
+安装：`plugin_manager install_bundle`，target 选仓库目录；或 `dsh plugin --profile desktop add "<仓库路径>"`。要求 DSH 0.2.1-rc.x。
 
-时间轴
-00:00 一个对话的瓶颈
-00:04 官方 Super-agent：仓库层
-00:11 桌面上的多个对话，谁来协调？
-00:18 多 Agent 喊话：补上对话层
-00:21 真实演示：一句话，4 个 worker 开工
-00:37 2 层 / 3 层 / 4 层组织架构
-00:47 对比官方 Super-agent
-00:53 任务书与 AI skill
-00:58 GitHub 与安装
-
-说明：3D 工作台是风格化演示，真实功能以 GitHub 仓库中的插件代码为准。插件 MIT 开源。
-
-#DeepSeek #DeepSeekHarness #AI #多Agent #开源 #3D #程序员 #效率工具
+#DeepSeek #DeepSeekHarness #AI #多Agent #开源 #3D #效率工具
