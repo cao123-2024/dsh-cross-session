@@ -65,7 +65,14 @@
 GitHub（MIT，欢迎 star / issue）：
 https://github.com/cao123-2024/dsh-cross-session
 
-安装：`plugin_manager install_bundle`，target 选仓库目录；或 `dsh plugin --profile desktop add "<仓库路径>"`。要求 DSH 0.2.1-rc.x 或 0.3.x。
+安装（DSH 界面里最省事）：
+1. 设置 → 插件
+2. 添加插件
+3. 包名或地址填：https://github.com/cao123-2024/dsh-cross-session
+4. 安装 → 启用
+
+也支持 `plugin_manager install_bundle` 或 `dsh plugin --profile desktop add "<仓库路径>"`。要求 DSH 0.2.1-rc.x 或 0.3.x。
 
 #DeepSeek #DeepSeekHarness #AI #多Agent #开源 #3D #效率工具
+
 

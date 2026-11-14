@@ -102,16 +102,23 @@
 
 要求：DSH `0.2.1-rc.x` 或 `0.3.x`（desktop 或其他 profile 均可），无额外依赖。
 
-### 方式一：Plugin Manager（推荐）
+### 方式一：在 DSH 界面里安装（推荐）
 
-在 DSH 中把仓库目录作为本地 bundle 安装，例如：
+1. 打开 **设置 → 插件**。
+2. 点 **添加插件**。
+3. 在「包名或地址」里填：`https://github.com/cao123-2024/dsh-cross-session`
+4. 点 **安装**，然后启用 `dsh-cross-session`。
+
+这个入口支持 npm 包、GitHub 仓库地址和本地目录；填仓库地址即可。
+
+### 方式二：Plugin Manager
 
 ```text
 plugin_manager install_bundle
 target = <本仓库绝对路径>
 ```
 
-### 方式二：CLI
+### 方式三：CLI
 
 ```bash
 dsh plugin --profile desktop add "<本仓库绝对路径>"
